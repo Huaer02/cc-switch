@@ -1,0 +1,19 @@
+{
+  "providers": {
+    "example1": {
+      "description": "My primary API key",
+      "base_url": "https://api.example.com",
+      "auth_token": "sk-your-key-here"
+    },
+    "example2": {
+      "description": "Secondary key with custom models",
+      "base_url": "https://api2.example.com",
+      "auth_token": "sk-your-other-key",
+      "model": "custom-model-name",
+      "sonnet_model": "custom-sonnet",
+      "opus_model": "custom-opus",
+      "haiku_model": "custom-haiku"
+    }
+  },
+  "default": "example1"
+}

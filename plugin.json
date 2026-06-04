@@ -1,0 +1,18 @@
+{
+  "name": "cc-switch",
+  "version": "1.0.0",
+  "description": "Claude Code provider/key switcher - switch between multiple API keys and providers with one command",
+  "author": {
+    "name": "Huaer02",
+    "url": "https://github.com/Huaer02"
+  },
+  "homepage": "https://github.com/Huaer02/cc-switch",
+  "repository": "https://github.com/Huaer02/cc-switch",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "multi-key",
+    "provider-switch",
+    "api-key"
+  ]
+}
