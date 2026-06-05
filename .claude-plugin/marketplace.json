@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "cc-switch",
+  "description": "Claude Code provider/key switcher - switch between multiple API keys and providers with one command",
+  "owner": {
+    "name": "Huaer02",
+    "url": "https://github.com/Huaer02"
+  },
+  "plugins": [
+    {
+      "name": "cc-switch",
+      "description": "Claude Code provider/key switcher - switch between multiple API keys and providers with one command",
+      "author": { "name": "Huaer02" },
+      "category": "productivity",
+      "source": "./"
+    }
+  ]
+}
