@@ -1,9 +1,14 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 # cc - Claude Code provider/key switcher
+# Compatible with both bash and zsh
 
 CC_PROVIDERS="$HOME/.claude/providers.json"
 
 cc() {
+  if [ -n "$ZSH_VERSION" ]; then
+    setopt localoptions KSH_ARRAYS
+  fi
+
   local _cyan=$'\033[36m' _green=$'\033[32m' _yellow=$'\033[33m'
   local _red=$'\033[31m' _dim=$'\033[2m' _reset=$'\033[0m'
 
@@ -22,7 +27,7 @@ cc() {
     return 0
   fi
 
-  if [[ -n "$1" ]]; then
+  if [[ -n "$1" && "$1" != -* ]]; then
     provider="$1"
     shift
     if ! jq -e ".providers[\"$provider\"]" "$CC_PROVIDERS" >/dev/null 2>&1; then
@@ -30,29 +35,36 @@ cc() {
       printf "Available: %s\n" "$(jq -r '.providers | keys | join(", ")' "$CC_PROVIDERS")"
       return 1
     fi
-  else
-    local -a _names _descs
+  elif [[ -z "$1" ]]; then
+    local _names=()
+    local _descs=()
     local _n _choice
 
-    jq -r '.providers | to_entries[] | "\(.key)\t\(.value.description // "")"' "$CC_PROVIDERS" | while IFS=$'\t' read -r _k _d; do
+    while IFS=$'\t' read -r _k _d; do
       _names+=("$_k")
       _descs+=("$_d")
-    done
+    done < <(jq -r '.providers | to_entries[] | "\(.key)\t\(.value.description // "")"' "$CC_PROVIDERS")
 
     _n=${#_names[@]}
+    if [[ $_n -eq 0 ]]; then
+      printf "%sError:%s no providers configured\n" "$_red" "$_reset"
+      return 1
+    fi
+
     printf "%sSelect a provider:%s\n" "$_cyan" "$_reset"
-    for (( _i=1; _i<=_n; _i++ )); do
+    local _i
+    for (( _i=0; _i<_n; _i++ )); do
       if [[ -n "${_descs[$_i]}" ]]; then
-        printf "  %s%d)%s %s %s- %s%s\n" "$_green" "$_i" "$_reset" "${_names[$_i]}" "$_dim" "${_descs[$_i]}" "$_reset"
+        printf "  %s%d)%s %s %s- %s%s\n" "$_green" "$((_i+1))" "$_reset" "${_names[$_i]}" "$_dim" "${_descs[$_i]}" "$_reset"
       else
-        printf "  %s%d)%s %s\n" "$_green" "$_i" "$_reset" "${_names[$_i]}"
+        printf "  %s%d)%s %s\n" "$_green" "$((_i+1))" "$_reset" "${_names[$_i]}"
       fi
     done
     echo ""
     printf "Enter number [1-%d]: " "$_n"
     read -r _choice
     if [[ "$_choice" -ge 1 && "$_choice" -le "$_n" ]] 2>/dev/null; then
-      provider="${_names[$_choice]}"
+      provider="${_names[$((_choice-1))]}"
     else
       printf "%sInvalid choice%s\n" "$_red" "$_reset"
       return 1
@@ -67,15 +79,14 @@ cc() {
   opus_model=$(jq -r ".providers[\"$provider\"].opus_model // empty" "$CC_PROVIDERS")
   haiku_model=$(jq -r ".providers[\"$provider\"].haiku_model // empty" "$CC_PROVIDERS")
 
-  local -a env_args
-  env_args=(
-    ANTHROPIC_BASE_URL="$base_url"
-    ANTHROPIC_AUTH_TOKEN="$auth_token"
-  )
-  [[ -n "$model" ]] && env_args+=(ANTHROPIC_MODEL="$model")
-  [[ -n "$sonnet_model" ]] && env_args+=(ANTHROPIC_DEFAULT_SONNET_MODEL="$sonnet_model")
-  [[ -n "$opus_model" ]] && env_args+=(ANTHROPIC_DEFAULT_OPUS_MODEL="$opus_model")
-  [[ -n "$haiku_model" ]] && env_args+=(ANTHROPIC_DEFAULT_HAIKU_MODEL="$haiku_model")
+  # Build --settings JSON to override settings.json env values
+  local settings_json
+  settings_json='{"env":{"ANTHROPIC_BASE_URL":"'"$base_url"'","ANTHROPIC_AUTH_TOKEN":"'"$auth_token"'"'
+  [[ -n "$model" ]] && settings_json+=',"ANTHROPIC_MODEL":"'"$model"'"'
+  [[ -n "$sonnet_model" ]] && settings_json+=',"ANTHROPIC_DEFAULT_SONNET_MODEL":"'"$sonnet_model"'"'
+  [[ -n "$opus_model" ]] && settings_json+=',"ANTHROPIC_DEFAULT_OPUS_MODEL":"'"$opus_model"'"'
+  [[ -n "$haiku_model" ]] && settings_json+=',"ANTHROPIC_DEFAULT_HAIKU_MODEL":"'"$haiku_model"'"'
+  settings_json+='}}'
 
   local _desc
   _desc=$(jq -r ".providers[\"$provider\"].description // empty" "$CC_PROVIDERS")
@@ -84,5 +95,5 @@ cc() {
   else
     printf "%s→%s Using: %s%s%s\n" "$_green" "$_reset" "$_cyan" "$provider" "$_reset"
   fi
-  env "${env_args[@]}" claude "$@"
+  claude --settings "$settings_json" "$@"
 }
